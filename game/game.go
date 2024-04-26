@@ -19,6 +19,12 @@ const (
 	bg     = termbox.ColorDefault
 )
 
+const (
+	start = 0 + iota
+	active
+	over
+)
+
 type Game struct {
 	screen      *screen.Screen
 	bird        *bird.Bird
@@ -26,16 +32,15 @@ type Game struct {
 	inputEvents chan int
 	score       int
 	ticker      time.Ticker
-	// pipe        *plumber.Pipe
+	state       int
 }
 
 func Init() *Game {
 	return &Game{
 		screen:      screen.Init(Width, Height),
-		bird:        bird.Init(8, 12),
+		bird:        bird.Init(),
 		plumber:     plumber.Init(),
 		inputEvents: make(chan int),
-		// pipe:        plumber.Init(36, -12),
 	}
 }
 
@@ -51,24 +56,73 @@ func (g *Game) render() error {
 
 	// Render name and score because too much work to have a separate class, oops
 	utils.Draw(left, top-1, "Flappy Term", fg, bg)
-	utils.Draw(left, bottom+1, fmt.Sprintf("Score: %d", g.score), fg, bg)
-
 	g.screen.Render(left, top, fg, bg)
+
+	if g.state == start {
+		utils.Draw(left+1, top+2, "##### #       #   ####  ####  #   #", termbox.ColorYellow, bg)
+		utils.Draw(left+1, top+3, "#     #      # #  #   # #   #  # #", termbox.ColorYellow, bg)
+		utils.Draw(left+1, top+4, "##### #     ##### ####  ####    #", termbox.ColorYellow, bg)
+		utils.Draw(left+1, top+5, "#     #     #   # #     #       #", termbox.ColorYellow, bg)
+		utils.Draw(left+1, top+6, "#     ##### #   # #     #       #", termbox.ColorYellow, bg)
+
+		utils.Draw(left+7, top+8, "##### ##### ####  #   #", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+9, "  #   #     #   # ## ##", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+10, "  #   ##### ####  # # #", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+11, "  #   #     #  #  #   #", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+12, "  #   ##### #   # #   #", termbox.ColorLightRed, bg)
+
+		utils.Draw(left+1, top+18, "Press [Space] or [k] or [Up] to Jump", termbox.ColorYellow, bg)
+		utils.Draw(left+4, top+20, "Press [Enter] or [i] to Start", termbox.ColorGreen, bg)
+		utils.Draw(left+5, top+22, "Press [Esc] or [q] to Quit", termbox.ColorRed, bg)
+
+		return termbox.Flush()
+	}
+
+	if g.state == over {
+		g.screen.Render(left, top, fg, bg)
+		utils.Draw(left+7, top+2, " ####   #   #   # #####", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+3, "#      # #  ## ## #", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+4, "# ### ##### # # # #####", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+5, "#   # #   # #   # #", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+6, " ###  #   # #   # #####", termbox.ColorLightRed, bg)
+
+		utils.Draw(left+7, top+8, " ###  #   # ##### ####", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+9, "#   # #   # #     #   #", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+10, "#   # #   # ##### ####", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+11, "#   #  # #  #     #  #", termbox.ColorLightRed, bg)
+		utils.Draw(left+7, top+12, " ###    #   ##### #   #", termbox.ColorLightRed, bg)
+
+		scoreText := fmt.Sprintf("SCORE: %d", g.score)
+		utils.Draw(left+(Width-len(scoreText))/2, top+16, scoreText, fg, bg)
+
+		utils.Draw(left+1, top+18, "Press [Space] or [k] or [Up] to Jump", termbox.ColorYellow, bg)
+		utils.Draw(left+4, top+20, "Press [Enter] or [i] to Start", termbox.ColorGreen, bg)
+		utils.Draw(left+5, top+22, "Press [Esc] or [q] to Quit", termbox.ColorRed, bg)
+
+		return termbox.Flush()
+	}
+
 	g.bird.Render(left, top, bg)
 	for _, p := range g.plumber {
 		p.Render(top, bottom, left, right, bg)
 	}
+	utils.Draw(right-21, bottom+1, "[Esc] or [q] to Quit", fg, bg)
+	utils.Draw(left, bottom+1, fmt.Sprintf("Score: %d", g.score), fg, bg)
 
 	return termbox.Flush()
 }
 
+// Tick in an expected interval to handle physics
 func (g *Game) physicsLoop(stopped chan bool) {
 	for {
+		if g.state != active {
+			continue
+		}
 		select {
 		case <-stopped:
 			return
 		case <-g.ticker.C:
-			// Move pipe
+			// Move pipes
 			for _, p := range g.plumber {
 				if p.X == -5 {
 					p.Reset()
@@ -86,6 +140,7 @@ func (g *Game) physicsLoop(stopped chan bool) {
 	}
 }
 
+// Game loop will tick when ever it can
 func (g *Game) Start() {
 	var err error
 	if err = termbox.Init(); err != nil {
@@ -116,9 +171,15 @@ gameLoop:
 			case input.Quit:
 				g.ticker.Stop()
 				break gameLoop
-				// case input.Start:
+			case input.Start:
+				g.score = 0
+				g.bird.Reset()
+				plumber.Reset(g.plumber)
+				g.state = active
 			case input.Jump:
 				g.bird.Moving = -3
+			case input.End:
+				g.state = over
 			default:
 			}
 		default:
