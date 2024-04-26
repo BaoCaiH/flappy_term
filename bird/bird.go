@@ -12,8 +12,10 @@ type Bird struct {
 	Moving int
 }
 
-func Init(startX, startY int) *Bird {
-	return &Bird{X: startX, Y: startY, HX: 3, HY: 2, Moving: 1}
+func Init() *Bird {
+	b := Bird{}
+	b.Reset()
+	return &b
 }
 
 func (b *Bird) Render(x, y int, bg termbox.Attribute) {
@@ -27,4 +29,9 @@ func (b *Bird) Render(x, y int, bg termbox.Attribute) {
 	termbox.SetCell(left, top+1, '◀', termbox.ColorWhite, bg)
 	utils.Draw(left+1, top+1, "■■", termbox.ColorYellow, bg)
 	termbox.SetCell(left+3, top+1, '=', termbox.ColorLightRed, bg)
+}
+
+func (b *Bird) Reset() {
+	b.X = 8
+	b.Y = 12
 }

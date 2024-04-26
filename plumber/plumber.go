@@ -65,6 +65,12 @@ func (p *Pipe) Render(top, bottom, left, right int, bg termbox.Attribute) {
 	}
 }
 
+func Reset(pipes []*Pipe) {
+	for i, p := range pipes {
+		p.X = 42 + i*(pipeWidth+pipeDist)
+	}
+}
+
 func (p *Pipe) Reset() {
 	p.X = pipeWidth*2 + pipeDist*3
 	p.Y = rand.IntN(12) - 12

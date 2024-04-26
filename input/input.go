@@ -6,6 +6,7 @@ const (
 	Quit int = -1 + iota
 	Start
 	Jump
+	End
 )
 
 func HandleInput(inputChan chan int) {
@@ -19,6 +20,8 @@ func HandleInput(inputChan chan int) {
 			inputChan <- Start
 		case event.Key == termbox.KeySpace || event.Ch == 'k' || event.Key == termbox.KeyArrowUp:
 			inputChan <- Jump
+		case event.Ch == 'p':
+			inputChan <- End
 		}
 	}
 }
