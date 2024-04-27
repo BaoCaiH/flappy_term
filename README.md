@@ -14,6 +14,8 @@ Also, also, I saw [ThePrimeagen](https://www.youtube.com/@ThePrimeTimeagen) star
 
 ## ⚙️ Setup & 🚀 Launch
 
+Download one of the binaries on [itch.io](https://skitefall.itch.io/flappy-term) or..
+
 1. Have `go1.22.2` or higher I think also works
 2. Clone this repo
 3. `go run main.go`
