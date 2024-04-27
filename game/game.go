@@ -57,6 +57,7 @@ func (g *Game) render() error {
 	// Render name and score because too much work to have a separate class, oops
 	utils.Draw(left, top-1, "Flappy Term", fg, bg)
 	g.screen.Render(left, top, fg, bg)
+	scoreText := fmt.Sprintf("Score: %d", g.score)
 
 	if g.state == start {
 		utils.Draw(left+1, top+2, "##### #       #   ####  ####  #   #", termbox.ColorYellow, bg)
@@ -92,7 +93,6 @@ func (g *Game) render() error {
 		utils.Draw(left+7, top+11, "#   #  # #  #     #  #", termbox.ColorLightRed, bg)
 		utils.Draw(left+7, top+12, " ###    #   ##### #   #", termbox.ColorLightRed, bg)
 
-		scoreText := fmt.Sprintf("SCORE: %d", g.score)
 		utils.Draw(left+(Width-len(scoreText))/2, top+16, scoreText, fg, bg)
 
 		utils.Draw(left+1, top+18, "Press [Space] or [k] or [Up] to Jump", termbox.ColorYellow, bg)
@@ -106,8 +106,9 @@ func (g *Game) render() error {
 	for _, p := range g.plumber {
 		p.Render(top, bottom, left, right, bg)
 	}
-	utils.Draw(right-21, bottom+1, "[Esc] or [q] to Quit", fg, bg)
-	utils.Draw(left, bottom+1, fmt.Sprintf("Score: %d", g.score), fg, bg)
+	utils.Draw(right-len(scoreText), top-1, scoreText, fg, bg)
+	utils.Draw(right-31, bottom+1, "[Space] or [k] or [Up] to Jump", fg, bg)
+	utils.Draw(right-21, bottom+2, "[Esc] or [q] to Quit", fg, bg)
 
 	return termbox.Flush()
 }
@@ -133,9 +134,27 @@ func (g *Game) physicsLoop(stopped chan bool) {
 					g.score += 1
 				}
 			}
+
 			// Move bird
 			g.bird.Y = min(max(g.bird.Y+g.bird.Moving, 0), g.screen.H)
 			g.bird.Moving = 1
+
+			// Check collisions
+			if g.bird.Y <= 0 || g.bird.Y >= g.screen.H {
+				g.state = over
+				continue
+			}
+
+		collisionLoop:
+			for _, p := range g.plumber {
+				if g.bird.X+2 < p.X || g.bird.X >= p.X+plumber.PipeWidth {
+					continue collisionLoop
+				}
+				if g.bird.Y > p.Y && g.bird.Y+2 <= p.Y+plumber.PipeGap {
+					continue collisionLoop
+				}
+				g.state = over
+			}
 		}
 	}
 }
